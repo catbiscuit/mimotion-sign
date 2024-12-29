@@ -344,10 +344,10 @@ namespace MiMotionSign
             foreach (var item in data2)
                 request2.AddOrUpdateParameter(item.Key, item.Value);
             RestResponse response2 = await client2.ExecuteAsync(request2);
-            var jObject2 = JsonSerializer.Deserialize<JsonObject>(response2.Content);
+            var jObject2 = response2.Content?.TryToObject<JsonObject>();
 
-            var login_token = jObject2["token_info"]["login_token"]?.ToString() ?? "";
-            var userid = jObject2["token_info"]["user_id"]?.ToString() ?? "";
+            var login_token = jObject2?["token_info"]?["login_token"]?.ToString() ?? "";
+            var userid = jObject2?["token_info"]?["user_id"]?.ToString() ?? "";
 
             return (login_token, userid, "");
         }
@@ -364,8 +364,8 @@ namespace MiMotionSign
             RestRequest request1 = new() { Method = Method.Get };
             request1.AddOrUpdateHeaders(login_headers);
             RestResponse response1 = await client1.ExecuteAsync(request1);
-            var jObject = JsonSerializer.Deserialize<JsonObject>(response1.Content);
-            var app_token = jObject["token_info"]["app_token"]?.ToString() ?? "";
+            var jObject = response1.Content?.TryToObject<JsonObject>();
+            var app_token = jObject?["token_info"]?["app_token"]?.ToString() ?? "";
 
             return app_token;
         }
@@ -394,6 +394,9 @@ namespace MiMotionSign
                 data_json = Regex.Replace(data_json, stepMatch.Groups[1].Value, step);
 
             var app_token = await Motion_GetAppToken(login_token, fakeIP);
+            if (string.IsNullOrWhiteSpace(app_token))
+                return (false, "", "app_token获取失败");
+
             var t = Util.GetTimeStamp_Milliseconds();
 
             var url = $"https://api-mifit-cn.huami.com/v1/data/band_data.json?&t={t}";
@@ -409,9 +412,9 @@ namespace MiMotionSign
             request1.AddOrUpdateHeaders(headers);
             request1.AddParameter("text/plain", data, ParameterType.RequestBody);
             RestResponse response1 = await client1.ExecuteAsync(request1);
-            var jObject = JsonSerializer.Deserialize<JsonObject>(response1.Content);
+            var jObject = response1.Content?.TryToObject<JsonObject>();
 
-            return (true, step, $"修改步数({step}) [{jObject["message"]?.ToString()}]");
+            return (true, step, $"修改步数({step}) [{jObject?["message"]?.ToString()}]");
         }
 
         static string GetAccessToken(string location)
