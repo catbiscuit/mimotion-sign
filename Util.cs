@@ -220,20 +220,20 @@ namespace MiMotionSign
         public static string GetExceptionMsg(Exception ex, string backStr)
         {
             StringBuilder sb = new();
-            sb.AppendLine("");
-            sb.AppendLine("****************************Exception-Start****************************");
+            //sb.AppendLine("");
+            //sb.AppendLine("****************************Exception-Start****************************");
             if (ex != null)
             {
-                sb.AppendLine("【异常类型】：" + ex.GetType().Name);
-                sb.AppendLine("【异常信息】：" + ex.Message);
-                sb.AppendLine("【堆栈调用】：" + ex.StackTrace);
+                //sb.AppendLine("【异常类型】：" + ex.GetType().Name);
+                //sb.AppendLine("【异常信息】：" + ex.Message);
+                //sb.AppendLine("【堆栈调用】：" + ex.StackTrace);
             }
             else
             {
-                sb.AppendLine("【未处理异常】：" + backStr);
+                //sb.AppendLine("【未处理异常】：" + backStr);
             }
-            sb.AppendLine("****************************Exception-End****************************");
-            sb.AppendLine("");
+            //sb.AppendLine("****************************Exception-End****************************");
+            //sb.AppendLine("");
             return sb.ToString();
         }
 
