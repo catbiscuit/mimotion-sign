@@ -1,6 +1,7 @@
 ﻿using RestSharp;
 using System.Net;
 using System.Net.Mail;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -215,6 +216,27 @@ namespace MiMotionSign
 
             return str;
         }
+
+        public static string GetExceptionMsg(Exception ex, string backStr)
+        {
+            StringBuilder sb = new();
+            sb.AppendLine("");
+            sb.AppendLine("****************************Exception-Start****************************");
+            if (ex != null)
+            {
+                sb.AppendLine("【异常类型】：" + ex.GetType().Name);
+                sb.AppendLine("【异常信息】：" + ex.Message);
+                sb.AppendLine("【堆栈调用】：" + ex.StackTrace);
+            }
+            else
+            {
+                sb.AppendLine("【未处理异常】：" + backStr);
+            }
+            sb.AppendLine("****************************Exception-End****************************");
+            sb.AppendLine("");
+            return sb.ToString();
+        }
+
     }
 
     public class DateTimeConverterUsingDateTimeFormat : JsonConverter<DateTime>

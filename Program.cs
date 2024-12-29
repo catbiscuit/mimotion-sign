@@ -229,6 +229,7 @@ namespace MiMotionSign
                     }
                     catch (Exception ex)
                     {
+                        Console.WriteLine(Util.GetExceptionMsg(ex, ""));
                         consumerResult.Success = false;
                         consumerResult.Msg = "失败，" + (ex?.Message ?? "");
                         results.Add(consumerResult);
@@ -258,7 +259,8 @@ namespace MiMotionSign
             }
             catch (Exception ex)
             {
-                return new QueueResult() { User = queueModel.User, Success = false, Step = "", Msg = ex?.Message, };
+                Console.WriteLine(Util.GetExceptionMsg(ex, ""));
+                return new QueueResult() { User = queueModel.User, Success = false, Step = "", Msg = $"单个执行错误:{(ex?.Message ?? "")}", };
             }
         }
 
@@ -299,7 +301,8 @@ namespace MiMotionSign
             }
             catch (Exception ex)
             {
-                return ("", "", $"获取accessToken异常:{ex.Message}");
+                Console.WriteLine(Util.GetExceptionMsg(ex, ""));
+                return ("", "", $"获取accessToken异常:{(ex?.Message ?? "")}");
             }
 
             var url2 = "https://account.huami.com/v2/client/login";
