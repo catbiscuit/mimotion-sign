@@ -1,0 +1,26 @@
+name: MiMotionSign
+on:
+  schedule:
+    - cron: '52 2,4,6,10,22 * * *'
+  watch:
+    types: started
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: szenius/set-timezone@v1.0
+        with:
+          timezoneLinux: "Asia/Shanghai"
+        
+      - name: dotnetEnv
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '8.0.x'
+        
+      - name: run
+        run: dotnet run -c Release
+        env:        
+          CONF: ${{ secrets.CONF }}
+        
