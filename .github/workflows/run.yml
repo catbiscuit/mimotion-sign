@@ -1,7 +1,7 @@
 name: MiMotionSign
 on:
   schedule:
-    - cron: '38 0,2,4,6,8,12,14,22 * * *'
+    - cron: '54 0,2,4,6,8,10,12,22 * * *'
   watch:
     types: started
   workflow_dispatch:
