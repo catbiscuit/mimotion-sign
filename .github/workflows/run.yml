@@ -1,0 +1,130 @@
+name: MiMotionSign
+on:
+  schedule:
+    - cron: '50 0,2,4,6,8,10,12,14,22 * * *'
+  watch:
+    types: started
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: szenius/set-timezone@v1.0
+        with:
+          timezoneLinux: "Asia/Shanghai"
+        
+      - name: dotnetEnv
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: read CURRENT_BATCH
+        id: read_batch
+        env:
+          RAW_BATCH: ${{ vars.CURRENT_BATCH }}
+        run: |
+          CUR="${RAW_BATCH:-0}"
+          echo "current_batch=$CUR" >> $GITHUB_OUTPUT
+          echo "CURRENT_BATCH=$CUR"      
+
+      - name: run
+        run: dotnet run -c Release
+        env:        
+          CONF: ${{ secrets.CONF }}
+          CURRENT_BATCH: ${{ steps.read_batch.outputs.current_batch }}
+          BATCH_SIZE: "3"
+
+      - name: calc Next Batch
+        id: calc_next
+        env:
+          CUR: ${{ steps.read_batch.outputs.current_batch }}
+          CONF: ${{ secrets.CONF }}
+          BATCH_SIZE: "3"
+        run: |
+          set -e
+          
+          TEMP_PROJECT_DIR=$(mktemp -d)
+          trap 'rm -rf "$TEMP_PROJECT_DIR"' EXIT
+          
+          cd "$TEMP_PROJECT_DIR"
+          
+          dotnet new console -n TempCalculator --force
+          cd TempCalculator
+          
+          cat > Program.cs << 'EOF'
+          using System;
+          using System.Text.Json;
+          using System.Dynamic;
+
+          string? configJson = Environment.GetEnvironmentVariable("CONF");
+
+          if (string.IsNullOrEmpty(configJson))
+          {
+              Console.WriteLine("0");
+              return;
+          }
+
+          try
+          {
+              dynamic? obj = System.Text.Json.JsonSerializer.Deserialize<ExpandoObject>(configJson, new JsonSerializerOptions
+              {
+                  PropertyNameCaseInsensitive = true,
+                  ReadCommentHandling = JsonCommentHandling.Skip
+              });
+              
+              int currentBatch = int.Parse(Environment.GetEnvironmentVariable("CUR") ?? "0");
+              int batchSize = int.Parse(Environment.GetEnvironmentVariable("BATCH_SIZE") ?? "3");
+              int totalCnt = obj?.Peoples?.GetArrayLength() ?? 0;
+              int totalBatch = (totalCnt / batchSize) + (totalCnt % batchSize > 0 ? 1 : 0);
+              int nextBatch = currentBatch >= (totalBatch - 1) ? 0 : currentBatch + 1;
+
+              Console.WriteLine(nextBatch);
+          }
+          catch
+          {
+              Console.WriteLine("0");
+          }
+          EOF
+          
+          NEXT_BATCH=$(dotnet run)
+          
+          echo "next_batch=$NEXT_BATCH" >>$GITHUB_OUTPUT
+          echo "NEXT=$NEXT_BATCH"
+
+      - name: write Repo Variable
+        env:
+          GH_TOKEN: ${{ secrets.PAT }}
+        run: |
+          OWNER_REPO="${GITHUB_REPOSITORY}"
+          OWNER="${OWNER_REPO%/*}"
+          REPO="${OWNER_REPO#*/}"
+          NAME="CURRENT_BATCH"
+          VALUE="${{ steps.calc_next.outputs.next_batch }}"
+
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${OWNER}/${REPO}/actions/variables/${NAME}")
+
+          if [ "$STATUS" = "200" ]; then
+            curl -s -X PATCH \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${OWNER}/${REPO}/actions/variables/${NAME}" \
+              -d "{\"name\":\"${NAME}\",\"value\":\"${VALUE}\"}"
+            echo "Updated ${NAME}=${VALUE}"
+          else
+            curl -s -X POST \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${OWNER}/${REPO}/actions/variables" \
+              -d "{\"name\":\"${NAME}\",\"value\":\"${VALUE}\"}"
+            echo "Created ${NAME}=${VALUE}"
+          fi
